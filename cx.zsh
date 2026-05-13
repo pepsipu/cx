@@ -81,6 +81,12 @@ cx() {
   local name rows
 
   case $1 in
+    @?*)
+      name=${1#@}
+      shift
+      _cx_run "$name" "$@"
+      return
+      ;;
     list)
       shift
       _cx_list "$@"
@@ -93,14 +99,9 @@ cx() {
       ;;
   esac
 
-  if [[ -n $1 && -r "$CX_AUTH/$1.auth.json" ]]; then
-    name=$1
-    shift
-  else
-    rows=$(_cx_rows)
-    name=$(_cx_select_account "$rows")
-    [[ -n $name ]] || return 1
-  fi
+  rows=$(_cx_rows)
+  name=$(_cx_select_account "$rows")
+  [[ -n $name ]] || return 1
 
   _cx_run "$name" "$@"
 }
@@ -160,7 +161,7 @@ _cx_complete() {
 
   (( CURRENT == 2 )) || return
   _describe -t commands 'command' commands
-  compadd -a accounts
+  compadd -P @ -a accounts
 }
 
 (( $+functions[compdef] )) && compdef _cx_complete cx
