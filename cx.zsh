@@ -80,6 +80,19 @@ _cx_select_account() {
 cx() {
   local name rows
 
+  case $1 in
+    list)
+      shift
+      _cx_list "$@"
+      return
+      ;;
+    refresh)
+      shift
+      _cx_refresh "$@"
+      return
+      ;;
+  esac
+
   if [[ -n $1 && -r "$CX_AUTH/$1.auth.json" ]]; then
     name=$1
     shift
@@ -92,7 +105,7 @@ cx() {
   _cx_run "$name" "$@"
 }
 
-cxr() {
+_cx_refresh() {
   local auth name
 
   for auth in "$CX_AUTH"/*.auth.json(N); do
@@ -109,25 +122,45 @@ cxr() {
   wait
 }
 
-_cxl_print_window() {
-  local rows=$1 used=$2 reset=$3 pct filled bar gray=$'\033[90m' off=$'\033[0m'
+_cx_print_window() {
+  local rows=$1 used=$2 reset=$3 pct filled bar width=0 gray=$'\033[90m' off=$'\033[0m'
   local -a f
+
+  while IFS=$'\t' read -rA f; do
+    (( ${#f[1]} > width )) && width=${#f[1]}
+  done <<< "$rows"
 
   print -r -- "$rows" | sort -t $'\t' -k${used},${used}n | while IFS=$'\t' read -rA f; do
     pct=$(( 100 - f[$used] ))
     filled=$(( pct / 5 ))
     bar=$(printf '%*s' "$filled" '' | tr ' ' '█')$(printf '%*s' "$((20 - filled))" '' | tr ' ' '░')
-    printf '%s [%s] %3s%% left %s(resets %s)%s\n' "${f[1]}" "$bar" "$pct" "$gray" "$(date -r "${f[$reset]}" '+%H:%M on %d %b')" "$off"
+    printf '%-*s [%s] %3s%% left %s(resets %s)%s\n' "$width" "${f[1]}" "$bar" "$pct" "$gray" "$(date -r "${f[$reset]}" '+%H:%M on %d %b')" "$off"
   done
 }
 
-cxl() {
+_cx_list() {
   local rows
 
   rows=$(_cx_rows)
   [[ -n $rows ]] || return
 
-  _cxl_print_window "$rows" 2 3
+  _cx_print_window "$rows" 2 3
   echo
-  _cxl_print_window "$rows" 4 5
+  _cx_print_window "$rows" 4 5
 }
+
+_cx_complete() {
+  local -a commands accounts
+
+  commands=(
+    'list:list account quota usage and refresh times'
+    'refresh:refresh auth tokens for all accounts'
+  )
+  accounts=("$CX_AUTH"/*.auth.json(N:t:r:r))
+
+  (( CURRENT == 2 )) || return
+  _describe -t commands 'command' commands
+  compadd -a accounts
+}
+
+(( $+functions[compdef] )) && compdef _cx_complete cx

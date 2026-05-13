@@ -11,5 +11,5 @@ echo 'source ~/.codex/cx.zsh' >> ~/.zshrc
 ## commands
 
 - `cx [account] [codex options...]` - run codex with an account, or auto-pick one.
-- `cxr` - refresh auth tokens for all accounts.
-- `cxl` - list account quotas and refresh times.
+- `cx list` - list account quotas and refresh times.
+- `cx refresh` - refresh auth tokens for all accounts.
